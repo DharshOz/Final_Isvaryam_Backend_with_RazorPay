@@ -11,6 +11,8 @@ import uploadRouter from './routers/upload.router.js'
 import { dbconnect } from './config/database.config.js';
 import reviewRouter from './routers/review.router.js';
 import whishlistRouter from './routers/whishlist.router.js';
+import analyticsRouter from './routers/analytics.router.js';
+
 import path, { dirname } from 'path';
 dbconnect();
 
@@ -33,6 +35,7 @@ app.use('/api/users', userRouter);
 app.use('/api/orders', orderRouter);
 app.use('/api/upload', uploadRouter);
 app.use('/api/whishlist', whishlistRouter);
+app.use('/api/analytics', analyticsRouter);
 
 const publicFolder = path.join(__dirname, 'public');
 app.use(express.static(publicFolder));

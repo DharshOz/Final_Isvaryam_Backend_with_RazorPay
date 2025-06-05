@@ -121,5 +121,20 @@ router.put(
     res.json(review);
   })
 );
-
+// Get average ratings for all products
+router.get(
+  '/average-ratings',
+  handler(async (req, res) => {
+    const averages = await ReviewModel.aggregate([
+      {
+        $group: {
+          _id: '$productId',
+          avgRating: { $avg: '$rating' },
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+    res.json(averages);
+  })
+);
 export default router;

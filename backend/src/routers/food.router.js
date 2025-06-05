@@ -17,12 +17,11 @@ router.post(
   '/',
   admin,
   handler(async (req, res) => {
-    const { productId, name, price, description, images, category, specifications, quantities } = req.body;
+    const { productId, name, description, images, category, specifications, quantities } = req.body;
 
     const product = new FoodModel({
       productId,
       name,
-      price,
       description,
       images,
       category,
@@ -40,14 +39,13 @@ router.put(
   '/',
   admin,
   handler(async (req, res) => {
-    const { id, productId, name, price, description, images, category, specifications, quantities } = req.body;
+    const { id, productId, name, description, images, category, specifications, quantities } = req.body;
 
     await FoodModel.updateOne(
       { _id: id },
       {
         productId,
         name,
-        price,
         description,
         images,
         category,
