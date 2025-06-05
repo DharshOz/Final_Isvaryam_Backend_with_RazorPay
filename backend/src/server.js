@@ -10,6 +10,7 @@ import orderRouter from './routers/order.router.js';
 import uploadRouter from './routers/upload.router.js'
 import { dbconnect } from './config/database.config.js';
 import reviewRouter from './routers/review.router.js';
+import whishlistRouter from './routers/whishlist.router.js';
 import path, { dirname } from 'path';
 dbconnect();
 
@@ -31,6 +32,7 @@ app.use('/api/foods', foodRouter);
 app.use('/api/users', userRouter);
 app.use('/api/orders', orderRouter);
 app.use('/api/upload', uploadRouter);
+app.use('/api/whishlist', whishlistRouter);
 
 const publicFolder = path.join(__dirname, 'public');
 app.use(express.static(publicFolder));
