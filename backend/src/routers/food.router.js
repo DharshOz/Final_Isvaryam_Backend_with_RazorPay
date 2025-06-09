@@ -5,6 +5,7 @@ import admin from '../middleware/admin.mid.js';
 
 const router = Router();
 
+// Get all products
 router.get(
   '/',
   handler(async (req, res) => {
@@ -13,11 +14,12 @@ router.get(
   })
 );
 
+// Add a product (admin only)
 router.post(
   '/',
   admin,
   handler(async (req, res) => {
-    const { productId, name, description, images, category, specifications, quantities } = req.body;
+    const { productId, name, description, images, category, specifications, quantities, discount } = req.body;
 
     const product = new FoodModel({
       productId,
@@ -26,7 +28,8 @@ router.post(
       images,
       category,
       specifications,
-      quantities
+      quantities,
+      discount: discount ?? 0
     });
 
     await product.save();
@@ -35,11 +38,12 @@ router.post(
   })
 );
 
+// Update a product (admin only)
 router.put(
   '/',
   admin,
   handler(async (req, res) => {
-    const { id, productId, name, description, images, category, specifications, quantities } = req.body;
+    const { id, productId, name, description, images, category, specifications, quantities, discount } = req.body;
 
     await FoodModel.updateOne(
       { _id: id },
@@ -50,7 +54,8 @@ router.put(
         images,
         category,
         specifications,
-        quantities
+        quantities,
+        discount: discount ?? 0
       }
     );
 
@@ -58,6 +63,7 @@ router.put(
   })
 );
 
+// Delete a product (admin only)
 router.delete(
   '/:productId',
   admin,
@@ -68,6 +74,7 @@ router.delete(
   })
 );
 
+// Get products by category
 router.get(
   '/category/:category',
   handler(async (req, res) => {
@@ -77,6 +84,7 @@ router.get(
   })
 );
 
+// Search products by name
 router.get(
   '/search/:searchTerm',
   handler(async (req, res) => {
@@ -87,11 +95,22 @@ router.get(
   })
 );
 
+// Get a single product by productId
 router.get(
   '/:productId',
   handler(async (req, res) => {
     const { productId } = req.params;
     const product = await FoodModel.findOne({ productId });
+    res.send(product);
+  })
+);
+
+// Get a single product by MongoDB _id
+router.get(
+  '/id/:id',
+  handler(async (req, res) => {
+    const { id } = req.params;
+    const product = await FoodModel.findById(id);
     res.send(product);
   })
 );

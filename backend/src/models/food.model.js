@@ -17,7 +17,8 @@ const productSchema = new mongoose.Schema({
       size: { type: String, required: true },   // e.g., '500ml', '1kg'
       price: { type: Number, required: true }   // price for this size
     }
-  ]
+  ],
+  discount: { type: Number, default: 0 } // Discount percentage (0-100)
 });
 
 export const FoodModel = mongoose.model('Product', productSchema);
