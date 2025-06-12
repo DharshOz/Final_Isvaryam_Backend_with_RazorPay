@@ -4,20 +4,38 @@ import auth from '../middleware/auth.mid.js';
 import admin from '../middleware/admin.mid.js';
 import { ReviewModel } from '../models/review.model.js';
 import { FoodModel } from '../models/food.model.js';
+import multer from 'multer';
 
 const router = Router();
+const upload = multer({ dest: 'uploads/' }); // or your storage config
 
 // Add a review (customer, authenticated)
 router.post(
   '/',
   auth,
+  upload.array('images', 5),
   handler(async (req, res) => {
-    const { productId, review, rating } = req.body;
+    const { productId } = req.body;
+    const customerId = req.user.id;
+
+    // Count existing reviews for this user and product
+    const reviewCount = await ReviewModel.countDocuments({
+      productId,
+      CustomerId: customerId,
+    });
+
+    if (reviewCount >= 3) {
+      return res.status(400).json({ message: 'You have already submitted 3 reviews for this product.' });
+    }
+
+    const { review, rating } = req.body;
+    const images = req.files ? req.files.map(file => file.path) : [];
     const newReview = await ReviewModel.create({
-      CustomerId: req.user.id,
+      CustomerId: customerId,
       productId,
       review,
       rating,
+      images,
       replies: []
     });
     res.status(201).json(newReview);
@@ -135,6 +153,29 @@ router.get(
       }
     ]);
     res.json(averages);
+  })
+);
+
+// Get ratings distribution for a specific product
+router.get(
+  '/product/:productId/ratings-distribution',
+  handler(async (req, res) => {
+    const { productId } = req.params;
+    const distribution = await ReviewModel.aggregate([
+      { $match: { productId: productId } },
+      {
+        $group: {
+          _id: '$rating',
+          count: { $sum: 1 }
+        }
+      },
+      { $sort: { _id: -1 } }
+    ]);
+    const result = [5,4,3,2,1].map(star => ({
+      rating: star,
+      count: distribution.find(d => d._id === star) ? distribution.find(d => d._id === star).count : 0
+    }));
+    res.json(result);
   })
 );
 export default router;

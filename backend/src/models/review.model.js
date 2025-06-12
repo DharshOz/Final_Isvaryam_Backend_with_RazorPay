@@ -11,6 +11,7 @@ const reviewSchema = new mongoose.Schema({
   productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
   review: { type: String },
   rating: { type: Number },
+  images: [{ type: String }], // <-- Add this line
   replies: [replySchema]
 }, { timestamps: true });
 
