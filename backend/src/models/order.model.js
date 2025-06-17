@@ -3,7 +3,7 @@ import { OrderStatus } from '../constants/orderStatus.js';
 
 export const OrderItemSchema = new Schema(
   {
-    product: { type: Schema.Types.ObjectId, ref: 'Product', required: true },
+    product: { type: Schema.Types.ObjectId, ref: 'food', required: true }, // <-- change 'Product' to 'food'
     size: { type: String, required: true },
     price: { type: Number, required: true },
     quantity: { type: Number, required: true },

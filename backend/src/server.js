@@ -15,6 +15,7 @@ import whishlistRouter from './routers/whishlist.router.js';
 import analyticsRouter from './routers/analytics.router.js';
 import cartRouter from './routers/cart.router.js';
 import { dbconnect } from './config/database.config.js';
+import couponRouter from './routers/coupon.router.js';
 
 // Connect to MongoDB
 dbconnect();
@@ -45,6 +46,7 @@ app.use('/api/upload', uploadRouter);
 app.use('/api/whishlist', whishlistRouter);
 app.use('/api/analytics', analyticsRouter);
 app.use('/api/cart', cartRouter); // <-- This line is required!
+app.use('/api/coupons', couponRouter);
 // Debug Mongo URI in console
 console.log('Mongo URI:', process.env.MONGO_URI);
 

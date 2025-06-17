@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import handler from 'express-async-handler';
 import auth from '../middleware/auth.mid.js';
-import { BAD_REQUEST } from '../constants/httpStatus.js';
+import { BAD_REQUEST, UNAUTHORIZED } from '../constants/httpStatus.js';
 import { OrderModel } from '../models/order.model.js';
 import { OrderStatus } from '../constants/orderStatus.js';
 import { UserModel } from '../models/user.model.js';
@@ -28,10 +28,15 @@ router.post(
       if (quantityObj.price !== item.price) return res.status(BAD_REQUEST).send('Price mismatch!');
     }
 
-    await OrderModel.deleteOne({
+    await OrderModel.deleteMany({
       user: req.user.id,
       status: OrderStatus.NEW,
     });
+
+    order.items = order.items.filter(item => item.product);
+    if (order.items.length === 0) {
+      return res.status(BAD_REQUEST).send('No valid products in cart!');
+    }
 
     const newOrder = new OrderModel({ ...order, user: req.user.id });
     await newOrder.save();
@@ -136,6 +141,17 @@ router.patch(
     res.json(order);
   })
 );
+
+router.get('/user-purchase-count', auth, async (req, res) => {
+  try {
+    console.log('user:', req.user); // Add this
+    const count = await OrderModel.countDocuments({ user: req.user.id, status: 'PAYED' });
+    res.json({ count });
+  } catch (err) {
+    console.error('Error in user-purchase-count:', err); // Add this
+    res.status(500).json({ message: 'Internal server error' });
+  }
+});
 
 const getNewOrderForCurrentUser = async req =>
   await OrderModel.findOne({

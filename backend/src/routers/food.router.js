@@ -65,15 +65,14 @@ router.put(
 
 // Delete a product (admin only)
 router.delete(
-  '/:productId',
+  '/:id',
   admin,
   handler(async (req, res) => {
-    const { productId } = req.params;
-    await FoodModel.deleteOne({ productId });
+    const { id } = req.params;
+    await FoodModel.deleteOne({ _id: id });
     res.send();
   })
 );
-
 // Get products by category
 router.get(
   '/category/:category',
