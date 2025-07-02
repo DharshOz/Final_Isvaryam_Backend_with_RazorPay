@@ -18,24 +18,29 @@ router.get(
 router.post(
   '/',
   admin,
-  handler(async (req, res) => {
-    const { productId, name, description, images, category, specifications, quantities, discount } = req.body;
+  async (req, res) => {
+    try {
+      const { productId, name, description, images, category, specifications, quantities, discount } = req.body;
 
-    const product = new FoodModel({
-      productId,
-      name,
-      description,
-      images,
-      category,
-      specifications,
-      quantities,
-      discount: discount ?? 0
-    });
+      const product = new FoodModel({
+        productId,
+        name,
+        description,
+        images,
+        category,
+        specifications,
+        quantities,
+        discount: discount ?? 0
+      });
 
-    await product.save();
+      await product.save();
 
-    res.send(product);
-  })
+      res.send(product);
+    } catch (err) {
+      console.error('Add product error:', err);
+      res.status(500).json({ message: err.message });
+    }
+  }
 );
 
 // Update a product (admin only)
