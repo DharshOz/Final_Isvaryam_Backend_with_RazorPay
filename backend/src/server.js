@@ -38,6 +38,17 @@ app.use(
   })
 );
 
+// Allow your frontend domain
+const allowedOrigins = [
+  'https://isvaryam-01.onrender.com',
+  'http://localhost:3000'
+];
+
+app.use(cors({
+  origin: allowedOrigins,
+  credentials: true, // if you use cookies/auth
+}));
+
 // API Routes
 app.use('/api/reviews', reviewRouter);
 app.use('/api/foods', foodRouter);
