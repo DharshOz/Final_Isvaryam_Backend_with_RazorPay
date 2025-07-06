@@ -28,17 +28,6 @@ const __dirname = dirname(__filename);
 // Initialize Express app
 const app = express();
 
-// Middleware
-app.use(express.json({ limit: '20mb' }));
-app.use(express.urlencoded({ limit: '20mb', extended: true }));
-app.use(
-  cors({
-    credentials: true,
-    origin: ['http://localhost:3000'], // You can add your frontend domain here
-  })
-);
-
-// Allow your frontend domain
 const allowedOrigins = [
   'https://isvaryam-01.onrender.com',
   'http://localhost:3000'
@@ -46,8 +35,11 @@ const allowedOrigins = [
 
 app.use(cors({
   origin: allowedOrigins,
-  credentials: true, // if you use cookies/auth
+  credentials: true,
 }));
+
+app.use(express.json({ limit: '20mb' }));
+app.use(express.urlencoded({ limit: '20mb', extended: true }));
 
 // API Routes
 app.use('/api/reviews', reviewRouter);
