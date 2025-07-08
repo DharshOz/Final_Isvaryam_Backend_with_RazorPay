@@ -8,10 +8,10 @@ const replySchema = new mongoose.Schema({
 
 const reviewSchema = new mongoose.Schema({
   CustomerId: { type: mongoose.Schema.Types.ObjectId, ref: 'user', required: true },
-  productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Food', required: true }, // ✅ Fixed ref
+  productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
   review: { type: String },
   rating: { type: Number },
-  images: [{ type: String }],
+  images: [{ type: String }], // <-- Add this line
   replies: [replySchema]
 }, { timestamps: true });
 
