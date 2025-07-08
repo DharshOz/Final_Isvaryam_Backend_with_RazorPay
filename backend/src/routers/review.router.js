@@ -173,22 +173,18 @@ router.get(
 router.get(
   '/product/:productId',
   handler(async (req, res) => {
+    const { productId } = req.params;
+    console.log("📦 Fetching reviews for:", productId);
+
     try {
-      const { productId } = req.params;
-      console.log("Fetching reviews for productId:", productId);
-
-      // Check if it's a valid ObjectId
-      if (!productId.match(/^[0-9a-fA-F]{24}$/)) {
-        return res.status(400).json({ message: 'Invalid product ID format' });
-      }
-
       const reviews = await ReviewModel.find({ productId })
-        .populate('CustomerId', 'name');
+        .populate('CustomerId', 'name')
+        .populate('productId', 'name'); // This could break if `productId` model reference is wrong
 
       res.json(reviews);
     } catch (err) {
-      console.error("Error fetching reviews:", err);
-      res.status(500).json({ message: 'Internal Server Error', error: err.message });
+      console.error("❌ Error in GET /product/:productId:", err);
+      res.status(500).json({ error: err.message });
     }
   })
 );
