@@ -77,7 +77,8 @@ router.get(
       filter.user = user._id;
     }
 
-    const order = await OrderModel.findOne(filter);
+    const order = await OrderModel.findOne(filter).populate('items.product');
+
 
     if (!order) return res.send(UNAUTHORIZED);
 
