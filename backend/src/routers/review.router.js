@@ -55,23 +55,6 @@ router.get(
 
 // Get reviews for a specific product
 // Get reviews for a specific product
-router.get(
-  '/product/:productId',
-  handler(async (req, res) => {
-    const { productId } = req.params;
-
-    // Validate ObjectId
-    if (!productId.match(/^[0-9a-fA-F]{24}$/)) {
-      return res.status(400).json({ message: 'Invalid product ID' });
-    }
-
-    const reviews = await ReviewModel.find({ productId })
-      .populate('CustomerId', 'name');
-    res.json(reviews);
-  })
-);
-
-
 // Get reviews by category
 router.get(
   '/category/:category',
@@ -187,5 +170,28 @@ router.get(
   })
 );
 
+router.get(
+  '/product/:productId',
+  handler(async (req, res) => {
+    try {
+      const { productId } = req.params;
+      console.log("Incoming request for product reviews:", productId);
+
+      // Check if the productId is a valid Mongo ObjectId
+      if (!productId.match(/^[0-9a-fA-F]{24}$/)) {
+        return res.status(400).json({ message: 'Invalid product ID' });
+      }
+
+      const reviews = await ReviewModel.find({ productId })
+        .populate('CustomerId', 'name');
+
+      console.log("Reviews fetched:", reviews.length);
+      res.json(reviews);
+    } catch (error) {
+      console.error('Error in /product/:productId route:', error);
+      res.status(500).json({ message: 'Internal Server Error', error: error.message });
+    }
+  })
+);
 
 export default router;
