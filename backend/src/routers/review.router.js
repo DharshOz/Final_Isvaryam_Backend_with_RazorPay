@@ -54,6 +54,7 @@ router.get(
 );
 
 // Get reviews for a specific product
+// Get reviews for a specific product
 router.get(
   '/product/:productId',
   handler(async (req, res) => {
@@ -69,6 +70,7 @@ router.get(
     res.json(reviews);
   })
 );
+
 
 // Get reviews by category
 router.get(
@@ -184,4 +186,6 @@ router.get(
     res.json(result);
   })
 );
+
+
 export default router;
