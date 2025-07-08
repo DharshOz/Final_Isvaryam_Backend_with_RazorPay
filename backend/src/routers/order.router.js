@@ -91,11 +91,18 @@ router.get(
   auth,
   async (req, res) => {
     try {
-      console.log('req.user:', req.user); // Add this for debugging
       const order = await OrderModel.findOne({
-        user: req.user.id, // Use .id as in your JWT
+        user: req.user.id,
         status: OrderStatus.NEW,
-      }).populate('user');
+      })
+      .populate('user')
+      .populate({
+        path: 'items.product',
+        select: 'name images quantities'
+      });
+
+      if (!order) return res.status(404).send({ message: 'No active order found' });
+
       res.send(order);
     } catch (err) {
       console.error('Error in newOrderForCurrentUser:', err);
@@ -103,6 +110,7 @@ router.get(
     }
   }
 );
+
 
 router.get('/allstatus', (req, res) => {
   const allStatus = Object.values(OrderStatus);
