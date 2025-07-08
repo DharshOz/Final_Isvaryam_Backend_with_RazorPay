@@ -173,21 +173,19 @@ router.get(
 router.get(
   '/product/:productId',
   handler(async (req, res) => {
-    const { productId } = req.params;
-    console.log("📦 Fetching reviews for:", productId);
-
     try {
+      const { productId } = req.params;
+      console.log("Fetching reviews for product ID:", productId);
       const reviews = await ReviewModel.find({ productId })
-        .populate('CustomerId', 'name')
-        .populate('productId', 'name'); // This could break if `productId` model reference is wrong
-
+        .populate('CustomerId', 'name');
       res.json(reviews);
-    } catch (err) {
-      console.error("❌ Error in GET /product/:productId:", err);
-      res.status(500).json({ error: err.message });
+    } catch (error) {
+      console.error("Error fetching reviews:", error); // <-- This will log the actual error
+      res.status(500).json({ message: 'Internal server error' });
     }
   })
 );
+
 
 
 export default router;
