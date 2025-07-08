@@ -109,6 +109,21 @@ router.get(
   })
 );
 
+router.get(
+  '/product/:productId',
+  handler(async (req, res) => {
+    const { productId } = req.params;
+
+    // Validate ObjectId
+    if (!productId.match(/^[0-9a-fA-F]{24}$/)) {
+      return res.status(400).json({ message: 'Invalid product ID' });
+    }
+
+    const reviews = await ReviewModel.find({ productId })
+      .populate('CustomerId', 'name');
+    res.json(reviews);
+  })
+);
 // Get a single product by MongoDB _id
 router.get(
   '/id/:id',
