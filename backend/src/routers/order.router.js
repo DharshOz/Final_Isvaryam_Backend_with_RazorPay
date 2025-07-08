@@ -118,10 +118,14 @@ router.get(
     if (!user.isAdmin) filter.user = user._id;
     if (status) filter.status = status;
 
-    const orders = await OrderModel.find(filter).sort('-createdAt');
+    const orders = await OrderModel.find(filter)
+      .populate('items.product')  // ✅ Populates product details
+      .sort('-createdAt');
+
     res.send(orders);
   })
 );
+
 
 router.get(
   '/orders', admin,
