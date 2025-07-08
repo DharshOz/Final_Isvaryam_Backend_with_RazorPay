@@ -18,7 +18,11 @@ import { dbconnect } from './config/database.config.js';
 import couponRouter from './routers/coupon.router.js';
 import recipeRouter from './routers/recipe.router.js';
 import './models/user.model.js'; // Make sure this path is correct
-// Connect to MongoDB
+// ✅ Register models explicitly before routes
+
+import './models/food.model.js';
+import './models/order.model.js';
+
 dbconnect();
 
 // Setup __dirname for ES module
