@@ -175,23 +175,23 @@ router.get(
   handler(async (req, res) => {
     try {
       const { productId } = req.params;
-      console.log("Incoming request for product reviews:", productId);
+      console.log("Fetching reviews for productId:", productId);
 
-      // Check if the productId is a valid Mongo ObjectId
+      // Check if it's a valid ObjectId
       if (!productId.match(/^[0-9a-fA-F]{24}$/)) {
-        return res.status(400).json({ message: 'Invalid product ID' });
+        return res.status(400).json({ message: 'Invalid product ID format' });
       }
 
       const reviews = await ReviewModel.find({ productId })
         .populate('CustomerId', 'name');
 
-      console.log("Reviews fetched:", reviews.length);
       res.json(reviews);
-    } catch (error) {
-      console.error('Error in /product/:productId route:', error);
-      res.status(500).json({ message: 'Internal Server Error', error: error.message });
+    } catch (err) {
+      console.error("Error fetching reviews:", err);
+      res.status(500).json({ message: 'Internal Server Error', error: err.message });
     }
   })
 );
+
 
 export default router;
