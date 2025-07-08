@@ -7,7 +7,7 @@ const replySchema = new mongoose.Schema({
 });
 
 const reviewSchema = new mongoose.Schema({
-  CustomerId: { type: mongoose.Schema.Types.ObjectId, ref: 'user', required: true },
+  CustomerId: { type: mongoose.Schema.Types.ObjectId, ref: 'users', required: true },
   productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', required: true },
   review: { type: String },
   rating: { type: Number },
