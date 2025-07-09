@@ -181,4 +181,5 @@ const getNewOrderForCurrentUser = async req =>
   .sort({ createdAt: -1 })  // ✅ Sort by latest order
   .populate('user');
 
+export default router;
 
