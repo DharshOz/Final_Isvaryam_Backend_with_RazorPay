@@ -47,7 +47,6 @@ app.use(express.urlencoded({ limit: '20mb', extended: true }));
 
 // API Routes
 
-app.use('/orders', orderRoutes); // ✅ important
 app.use('/api/reviews', reviewRouter);
 app.use('/api/foods', foodRouter);
 app.use('/api/users', userRouter);
