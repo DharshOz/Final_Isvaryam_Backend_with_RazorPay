@@ -44,22 +44,35 @@ router.post(
 router.put(
   '/pay',
   handler(async (req, res) => {
-    const { paymentId } = req.body;
+    const { paymentId, method = 'PayPal', status = 'COMPLETED' } = req.body;
+
     const order = await getNewOrderForCurrentUser(req);
-    if (!order) {
-      res.status(BAD_REQUEST).send('Order Not Found!');
-      return;
+    if (!order) return res.status(BAD_REQUEST).send('Order Not Found!');
+
+    // Create Payment entry
+    const payment = new PaymentModel({
+      order: order._id,
+      user: req.user.id,
+      paymentId,
+      method,
+      amount: order.totalPrice,
+      status, // can be 'PENDING' or 'COMPLETED'
+    });
+    await payment.save();
+
+    // Update order only if payment is completed
+    if (status === 'COMPLETED') {
+      order.paymentId = paymentId;
+      order.status = OrderStatus.PAYED;
+      await order.save();
+
+      sendEmailReceipt(order);
     }
 
-    order.paymentId = paymentId;
-    order.status = OrderStatus.PAYED;
-    await order.save();
-
-    sendEmailReceipt(order);
-
-    res.send(order._id);
+    res.send({ orderId: order._id, paymentId: payment._id, paymentStatus: status });
   })
 );
+
 
 router.get(
   '/track/:orderId',
