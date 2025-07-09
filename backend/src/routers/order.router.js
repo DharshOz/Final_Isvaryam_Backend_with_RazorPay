@@ -89,35 +89,41 @@ router.get(
   })
 );
 
-router.delete(
-  '/:id',
-  auth,
-  handler(async (req, res) => {
-    const { id } = req.params;
-    const userId = req.user.id;
-    console.log(id);
+router.delete('/:id', auth, handler(async (req, res) => {
+  const { id } = req.params;
+  console.log('🧾 DELETE /orders/:id ->', id);
+  console.log('🔐 Authenticated user:', req.user?.id);
 
-    const order = await OrderModel.findById(id);
-    if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
-    }
+  const order = await OrderModel.findById(id);
+  console.log('📦 Order found:', order);
 
-    if (order.user.toString() !== userId) {
-      return res.status(403).json({ message: 'You are not allowed to delete this order.' });
-    }
+  if (!order) return res.status(404).json({ message: 'Order not found' });
 
-    if (order.status !== OrderStatus.NEW) {
-      return res.status(400).json({ message: 'Only NEW orders can be deleted' });
-    }
+  console.log('👤 order.user:', order.user.toString());
+  console.log('📦 order.status:', order.status);
 
-    const result = await OrderModel.findByIdAndDelete(id);
-    if (!result) {
-      return res.status(500).json({ message: 'Deletion failed, try again later.' });
-    }
+  if (order.user.toString() !== req.user.id) {
+    console.log('🚫 Ownership mismatch');
+    return res.status(403).json({ message: 'You are not allowed to delete this order.' });
+  }
 
-    res.json({ message: 'Order deleted successfully.' });
-  })
-);
+  if (order.status !== OrderStatus.NEW) {
+    console.log('⚠️ Order status is not NEW');
+    return res.status(400).json({ message: 'Only NEW orders can be deleted' });
+  }
+
+  const result = await OrderModel.findByIdAndDelete(id);
+  console.log('✅ Deletion result:', result);
+  
+  if (!result) {
+    console.log('❌ Deletion failed');
+    return res.status(500).json({ message: 'Deletion failed' });
+  }
+
+  console.log('✔️ Order deleted successfully');
+  res.json({ message: 'Order deleted successfully' });
+}));
+
 
 router.get(
   '/newOrderForCurrentUser',
