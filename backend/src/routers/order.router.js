@@ -4,7 +4,6 @@ import auth from '../middleware/auth.mid.js';
 import { BAD_REQUEST, UNAUTHORIZED } from '../constants/httpStatus.js';
 import { OrderModel } from '../models/order.model.js';
 import { PaymentModel } from '../models/payment.model.js';
-
 import { OrderStatus } from '../constants/orderStatus.js';
 import { UserModel } from '../models/user.model.js';
 import { sendEmailReceipt } from '../helpers/mail.helper.js';
@@ -22,7 +21,6 @@ router.post(
     if (order.items.length <= 0)
       return res.status(BAD_REQUEST).send('Cart Is Empty!');
 
-    // Validate prices and sizes
     for (const item of order.items) {
       const product = await FoodModel.findById(item.product);
       if (!product) return res.status(BAD_REQUEST).send('Invalid product in cart!');
@@ -51,18 +49,16 @@ router.put(
     const order = await getNewOrderForCurrentUser(req);
     if (!order) return res.status(BAD_REQUEST).send('Order Not Found!');
 
-    // Create Payment entry
     const payment = new PaymentModel({
       order: order._id,
       user: req.user.id,
       paymentId,
       method,
       amount: order.totalPrice,
-      status, // can be 'PENDING' or 'COMPLETED'
+      status,
     });
     await payment.save();
 
-    // Update order only if payment is completed
     if (status === 'COMPLETED') {
       order.paymentId = paymentId;
       order.status = OrderStatus.PAYED;
@@ -75,24 +71,18 @@ router.put(
   })
 );
 
-
 router.get(
   '/track/:orderId',
   handler(async (req, res) => {
     const { orderId } = req.params;
     const user = await UserModel.findById(req.user.id);
 
-    const filter = {
-      _id: orderId,
-    };
-
+    const filter = { _id: orderId };
     if (!user.isAdmin) {
       filter.user = user._id;
     }
 
     const order = await OrderModel.findOne(filter).populate('items.product');
-
-
     if (!order) return res.send(UNAUTHORIZED);
 
     return res.send(order);
@@ -105,27 +95,22 @@ router.delete(
   handler(async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;
-    console.log(id)
+    console.log(id);
 
-    // 1. Fetch order
     const order = await OrderModel.findById(id);
     if (!order) {
       return res.status(404).json({ message: 'Order not found' });
     }
 
-    // 2. Check ownership
     if (order.user.toString() !== userId) {
       return res.status(403).json({ message: 'You are not allowed to delete this order.' });
     }
 
-    // 3. Check status
     if (order.status !== OrderStatus.NEW) {
       return res.status(400).json({ message: 'Only NEW orders can be deleted' });
     }
 
-    // 4. Perform deletion
     const result = await OrderModel.findByIdAndDelete(id);
-
     if (!result) {
       return res.status(500).json({ message: 'Deletion failed, try again later.' });
     }
@@ -133,6 +118,7 @@ router.delete(
     res.json({ message: 'Order deleted successfully.' });
   })
 );
+
 router.get(
   '/newOrderForCurrentUser',
   auth,
@@ -142,11 +128,8 @@ router.get(
         user: req.user.id,
         status: OrderStatus.NEW,
       })
-      .populate('user')
-      .populate({
-        path: 'items.product',
-        select: 'name images quantities'
-      });
+        .populate('user')
+        .populate({ path: 'items.product', select: 'name images quantities' });
 
       if (!order) return res.status(404).send({ message: 'No active order found' });
 
@@ -158,33 +141,14 @@ router.get(
   }
 );
 
-
 router.get('/allstatus', (req, res) => {
   const allStatus = Object.values(OrderStatus);
   res.send(allStatus);
 });
 
 router.get(
-  '/:status?',
-  handler(async (req, res) => {
-    const status = req.params.status;
-    const user = await UserModel.findById(req.user.id);
-    const filter = {};
-
-    if (!user.isAdmin) filter.user = user._id;
-    if (status) filter.status = status;
-
-    const orders = await OrderModel.find(filter)
-      .populate('items.product')  // ✅ Populates product details
-      .sort('-createdAt');
-
-    res.send(orders);
-  })
-);
-
-
-router.get(
-  '/orders', admin,
+  '/orders',
+  admin,
   handler(async (req, res) => {
     const { user, status, from, to } = req.query;
     const filter = {};
@@ -195,20 +159,20 @@ router.get(
       if (from) filter.createdAt.$gte = new Date(from);
       if (to) filter.createdAt.$lte = new Date(to);
     }
+
     const orders = await OrderModel.find(filter)
-  .populate('items.product')
-  .populate('user')
-  .populate({ path: 'payment', select: 'status' })  // 👈 Add this if payment is populated
-  .sort('-createdAt');
+      .populate('items.product')
+      .populate('user')
+      .populate({ path: 'payment', select: 'status' })
+      .sort('-createdAt');
 
     res.json(orders);
   })
 );
 
-// ... existing imports and routes ...
-
 router.patch(
-  '/order/:id/status', admin,
+  '/order/:id/status',
+  admin,
   handler(async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
@@ -218,9 +182,9 @@ router.patch(
   })
 );
 
-// 🔽 Add below this ↓↓↓
 router.patch(
-  '/payment/:id/status', admin,
+  '/payment/:id/status',
+  admin,
   handler(async (req, res) => {
     const { id } = req.params;
     const { status } = req.body;
@@ -228,7 +192,6 @@ router.patch(
     const payment = await PaymentModel.findByIdAndUpdate(id, { status }, { new: true });
     if (!payment) return res.status(404).json({ message: 'Payment not found' });
 
-    // If status is completed, update order as well
     if (status === 'COMPLETED') {
       const order = await OrderModel.findById(payment.order);
       if (order && order.status !== OrderStatus.PAYED) {
@@ -242,25 +205,41 @@ router.patch(
   })
 );
 
-
 router.get('/user-purchase-count', auth, async (req, res) => {
   try {
-    console.log('user:', req.user); // Add this
+    console.log('user:', req.user);
     const count = await OrderModel.countDocuments({ user: req.user.id, status: 'PAYED' });
     res.json({ count });
   } catch (err) {
-    console.error('Error in user-purchase-count:', err); // Add this
+    console.error('Error in user-purchase-count:', err);
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+
+router.get(
+  '/:status?',
+  handler(async (req, res) => {
+    const status = req.params.status;
+    const user = await UserModel.findById(req.user.id);
+    const filter = {};
+
+    if (!user.isAdmin) filter.user = user._id;
+    if (status) filter.status = status;
+
+    const orders = await OrderModel.find(filter)
+      .populate('items.product')
+      .sort('-createdAt');
+
+    res.send(orders);
+  })
+);
 
 const getNewOrderForCurrentUser = async req =>
   await OrderModel.findOne({
     user: req.user.id,
     status: OrderStatus.NEW,
   })
-  .sort({ createdAt: -1 })  // ✅ Sort by latest order
-  .populate('user');
+    .sort({ createdAt: -1 })
+    .populate('user');
 
 export default router;
-
