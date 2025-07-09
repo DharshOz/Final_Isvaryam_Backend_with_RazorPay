@@ -164,6 +164,8 @@ router.get(
   })
 );
 
+// ... existing imports and routes ...
+
 router.patch(
   '/order/:id/status', admin,
   handler(async (req, res) => {
@@ -174,6 +176,31 @@ router.patch(
     res.json(order);
   })
 );
+
+// 🔽 Add below this ↓↓↓
+router.patch(
+  '/payment/:id/status', admin,
+  handler(async (req, res) => {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const payment = await PaymentModel.findByIdAndUpdate(id, { status }, { new: true });
+    if (!payment) return res.status(404).json({ message: 'Payment not found' });
+
+    // If status is completed, update order as well
+    if (status === 'COMPLETED') {
+      const order = await OrderModel.findById(payment.order);
+      if (order && order.status !== OrderStatus.PAYED) {
+        order.status = OrderStatus.PAYED;
+        order.paymentId = payment.paymentId;
+        await order.save();
+      }
+    }
+
+    res.json(payment);
+  })
+);
+
 
 router.get('/user-purchase-count', auth, async (req, res) => {
   try {
