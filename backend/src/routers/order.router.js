@@ -99,6 +99,40 @@ router.get(
   })
 );
 
+router.delete(
+  '/:id',
+  auth,
+  handler(async (req, res) => {
+    const { id } = req.params;
+    const userId = req.user.id;
+    console.log(id)
+
+    // 1. Fetch order
+    const order = await OrderModel.findById(id);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    // 2. Check ownership
+    if (order.user.toString() !== userId) {
+      return res.status(403).json({ message: 'You are not allowed to delete this order.' });
+    }
+
+    // 3. Check status
+    if (order.status !== OrderStatus.NEW) {
+      return res.status(400).json({ message: 'Only NEW orders can be deleted' });
+    }
+
+    // 4. Perform deletion
+    const result = await OrderModel.findByIdAndDelete(id);
+
+    if (!result) {
+      return res.status(500).json({ message: 'Deletion failed, try again later.' });
+    }
+
+    res.json({ message: 'Order deleted successfully.' });
+  })
+);
 router.get(
   '/newOrderForCurrentUser',
   auth,
@@ -208,40 +242,7 @@ router.patch(
   })
 );
 
-router.delete(
-  '/:id',
-  auth,
-  handler(async (req, res) => {
-    const { id } = req.params;
-    const userId = req.user.id;
-    console.log(id)
 
-    // 1. Fetch order
-    const order = await OrderModel.findById(id);
-    if (!order) {
-      return res.status(404).json({ message: 'Order not found' });
-    }
-
-    // 2. Check ownership
-    if (order.user.toString() !== userId) {
-      return res.status(403).json({ message: 'You are not allowed to delete this order.' });
-    }
-
-    // 3. Check status
-    if (order.status !== OrderStatus.NEW) {
-      return res.status(400).json({ message: 'Only NEW orders can be deleted' });
-    }
-
-    // 4. Perform deletion
-    const result = await OrderModel.findByIdAndDelete(id);
-
-    if (!result) {
-      return res.status(500).json({ message: 'Deletion failed, try again later.' });
-    }
-
-    res.json({ message: 'Order deleted successfully.' });
-  })
-);
 router.get('/user-purchase-count', auth, async (req, res) => {
   try {
     console.log('user:', req.user); // Add this
