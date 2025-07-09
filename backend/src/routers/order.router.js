@@ -17,9 +17,10 @@ router.post(
   handler(async (req, res) => {
     const order = req.body;
 
-    if (order.items.length <= 0) return res.status(BAD_REQUEST).send('Cart Is Empty!');
+    if (order.items.length <= 0)
+      return res.status(BAD_REQUEST).send('Cart Is Empty!');
 
-    // Validate each item's price matches the product's price for the selected size
+    // Validate prices and sizes
     for (const item of order.items) {
       const product = await FoodModel.findById(item.product);
       if (!product) return res.status(BAD_REQUEST).send('Invalid product in cart!');
@@ -28,11 +29,6 @@ router.post(
       if (quantityObj.price !== item.price) return res.status(BAD_REQUEST).send('Price mismatch!');
     }
 
-    await OrderModel.deleteMany({
-      user: req.user.id,
-      status: OrderStatus.NEW,
-    });
-
     order.items = order.items.filter(item => item.product);
     if (order.items.length === 0) {
       return res.status(BAD_REQUEST).send('No valid products in cart!');
@@ -40,9 +36,11 @@ router.post(
 
     const newOrder = new OrderModel({ ...order, user: req.user.id });
     await newOrder.save();
+
     res.send(newOrder);
   })
 );
+
 router.put(
   '/pay',
   handler(async (req, res) => {
