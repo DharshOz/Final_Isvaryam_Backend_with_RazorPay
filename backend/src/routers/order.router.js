@@ -214,6 +214,7 @@ router.delete(
   handler(async (req, res) => {
     const { id } = req.params;
     const userId = req.user.id;
+    console.log(id)
 
     // 1. Fetch order
     const order = await OrderModel.findById(id);
