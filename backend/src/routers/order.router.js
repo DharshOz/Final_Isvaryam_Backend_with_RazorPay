@@ -177,5 +177,8 @@ const getNewOrderForCurrentUser = async req =>
   await OrderModel.findOne({
     user: req.user.id,
     status: OrderStatus.NEW,
-  }).populate('user');
-export default router;
+  })
+  .sort({ createdAt: -1 })  // ✅ Sort by latest order
+  .populate('user');
+
+
