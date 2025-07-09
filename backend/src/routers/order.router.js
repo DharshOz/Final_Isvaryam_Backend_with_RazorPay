@@ -11,6 +11,10 @@ import { sendEmailReceipt } from '../helpers/mail.helper.js';
 import { FoodModel } from '../models/food.model.js';
 import admin from '../middleware/admin.mid.js';
 
+const Order = require('../models/orderModel');
+
+// DELETE /orders/:id
+
 const router = Router();
 router.use(auth);
 
@@ -102,9 +106,11 @@ router.get(
 router.delete('/:id', async (req, res) => {
   try {
     const deletedOrder = await Order.findByIdAndDelete(req.params.id);
-    if (!deletedOrder) return res.status(404).json({ message: 'Order not found' });
+    if (!deletedOrder) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
     res.json({ message: 'Order deleted successfully' });
-  } catch (error) {
+  } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
 });
