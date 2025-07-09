@@ -210,21 +210,28 @@ router.patch(
 // DELETE user order if status is PENDING
 router.delete(
   '/:id',
+  auth,
   handler(async (req, res) => {
+    console.log('DELETE route hit for:', req.params.id);
     const orderId = req.params.id;
     const userId = req.user.id;
 
     const order = await OrderModel.findById(orderId);
-
     if (!order) return res.status(404).json({ message: 'Order not found' });
-    if (order.user.toString() !== userId) return res.status(403).json({ message: 'Unauthorized' });
-    if (order.status !== OrderStatus.NEW) return res.status(400).json({ message: 'Only pending orders can be deleted' });
 
-    await order.deleteOne();
+    console.log('Order status:', order.status);
+
+    if (order.user.toString() !== userId)
+      return res.status(403).json({ message: 'Unauthorized' });
+
+    if (order.status.toLowerCase() !== OrderStatus.NEW.toLowerCase())
+      return res.status(400).json({ message: 'Only pending orders can be deleted' });
+
+    await OrderModel.findByIdAndDelete(orderId); // use this line
+
     res.json({ message: 'Order deleted successfully' });
   })
 );
-
 
 router.get('/user-purchase-count', auth, async (req, res) => {
   try {
