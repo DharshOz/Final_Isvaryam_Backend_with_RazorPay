@@ -207,32 +207,40 @@ router.patch(
     res.json(payment);
   })
 );
-// DELETE user order if status is PENDING
+
 router.delete(
   '/:id',
   auth,
   handler(async (req, res) => {
-    console.log('DELETE route hit for:', req.params.id);
-    const orderId = req.params.id;
+    const { id } = req.params;
     const userId = req.user.id;
 
-    const order = await OrderModel.findById(orderId);
-    if (!order) return res.status(404).json({ message: 'Order not found' });
+    // 1. Fetch order
+    const order = await OrderModel.findById(id);
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
 
-    console.log('Order status:', order.status);
+    // 2. Check ownership
+    if (order.user.toString() !== userId) {
+      return res.status(403).json({ message: 'You are not allowed to delete this order.' });
+    }
 
-    if (order.user.toString() !== userId)
-      return res.status(403).json({ message: 'Unauthorized' });
+    // 3. Check status
+    if (order.status !== OrderStatus.NEW) {
+      return res.status(400).json({ message: 'Only NEW orders can be deleted' });
+    }
 
-    if (order.status.toLowerCase() !== OrderStatus.NEW.toLowerCase())
-      return res.status(400).json({ message: 'Only pending orders can be deleted' });
+    // 4. Perform deletion
+    const result = await OrderModel.findByIdAndDelete(id);
 
-    await OrderModel.findByIdAndDelete(orderId); // use this line
+    if (!result) {
+      return res.status(500).json({ message: 'Deletion failed, try again later.' });
+    }
 
-    res.json({ message: 'Order deleted successfully' });
+    res.json({ message: 'Order deleted successfully.' });
   })
 );
-
 router.get('/user-purchase-count', auth, async (req, res) => {
   try {
     console.log('user:', req.user); // Add this
