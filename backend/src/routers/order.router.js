@@ -11,7 +11,6 @@ import { sendEmailReceipt } from '../helpers/mail.helper.js';
 import { FoodModel } from '../models/food.model.js';
 import admin from '../middleware/admin.mid.js';
 
-const Order = require('../models/orderModel');
 
 // DELETE /orders/:id
 
