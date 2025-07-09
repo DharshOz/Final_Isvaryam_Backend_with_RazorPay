@@ -161,7 +161,12 @@ router.get(
       if (from) filter.createdAt.$gte = new Date(from);
       if (to) filter.createdAt.$lte = new Date(to);
     }
-    const orders = await OrderModel.find(filter).populate('user').populate('items.product');
+    const orders = await OrderModel.find(filter)
+  .populate('items.product')
+  .populate('user')
+  .populate({ path: 'payment', select: 'status' })  // 👈 Add this if payment is populated
+  .sort('-createdAt');
+
     res.json(orders);
   })
 );
