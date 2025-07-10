@@ -1,3 +1,4 @@
+
 import { Router } from 'express';
 import handler from 'express-async-handler';
 import auth from '../middleware/auth.mid.js';
@@ -235,6 +236,19 @@ router.get('/user-purchase-count', auth, async (req, res) => {
     res.status(500).json({ message: 'Internal server error' });
   }
 });
+
+router.get(
+  '/order/:id',
+  handler(async (req, res) => {
+    const order = await OrderModel.findById(req.params.id)
+      .populate('items.product');
+
+    if (!order) return res.status(404).json({ message: 'Order not found' });
+
+    res.json(order);
+  })
+);
+
 
 const getNewOrderForCurrentUser = async req =>
   await OrderModel.findOne({
