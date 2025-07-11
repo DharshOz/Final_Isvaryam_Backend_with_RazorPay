@@ -17,6 +17,8 @@ import cartRouter from './routers/cart.router.js';
 import { dbconnect } from './config/database.config.js';
 import couponRouter from './routers/coupon.router.js';
 import recipeRouter from './routers/recipe.router.js';
+
+import mailRoute from './routers/mail.route.js';
 import './models/user.model.js'; // Make sure this path is correct
 // ✅ Register models explicitly before routes
 
