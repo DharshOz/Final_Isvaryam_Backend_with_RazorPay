@@ -34,10 +34,28 @@ const __dirname = dirname(__filename);
 // Initialize Express app
 const app = express();
 
-const allowedOrigins = [
-  'https://isvaryam-01.onrender.com',
-  'http://localhost:3000'
-];
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  const allowedOrigins = [
+    'https://isvaryam-01.onrender.com',
+    'http://localhost:3000'
+  ];
+
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader('Access-Control-Allow-Origin', origin);
+  }
+
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.header('Access-Control-Allow-Credentials', 'true');
+
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200); // Quickly respond to preflight
+  }
+
+  next();
+});
+
 
 app.use(cors({
   origin: allowedOrigins,
