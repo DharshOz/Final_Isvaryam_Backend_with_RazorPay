@@ -51,6 +51,9 @@ app.use(express.urlencoded({ limit: '20mb', extended: true }));
 
 app.use('/api/reviews', reviewRouter);
 app.use('/api/foods', foodRouter);
+
+app.use('/api/contact', mailRoute);
+
 app.use('/api/users', userRouter);
 app.use('/api/orders', orderRouter);
 app.use('/api/upload', uploadRouter);
