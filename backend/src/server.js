@@ -33,13 +33,12 @@ const __dirname = dirname(__filename);
 
 // Initialize Express app
 const app = express();
-
+const allowedOrigins = [
+  'https://isvaryam-01.onrender.com',
+  'http://localhost:3000'
+];
 app.use((req, res, next) => {
   const origin = req.headers.origin;
-  const allowedOrigins = [
-    'https://isvaryam-01.onrender.com',
-    'http://localhost:3000'
-  ];
 
   if (allowedOrigins.includes(origin)) {
     res.setHeader('Access-Control-Allow-Origin', origin);
