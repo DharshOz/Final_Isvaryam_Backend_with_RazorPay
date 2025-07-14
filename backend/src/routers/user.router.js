@@ -8,7 +8,7 @@ import bcrypt from 'bcryptjs';
 import auth from '../middleware/auth.mid.js';
 import admin from '../middleware/admin.mid.js';
 import { generateTokenResponse } from '../utils/generateToken.js';
-import { verifiedUsers } from './mail.route.js'; // ✅ Import OTP map
+import { verifiedUsers } from './auth.router.js'; // ✅ Import OTP map
 
 const PASSWORD_HASH_SALT_ROUNDS = 10;
 
