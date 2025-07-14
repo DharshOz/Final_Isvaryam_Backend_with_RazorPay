@@ -1,63 +1,76 @@
-// routes/mailRoute.js
-import express from 'express';
 import nodemailer from 'nodemailer';
-import dotenv from 'dotenv';
+import { Router } from 'express';
+import handler from 'express-async-handler';
 
-dotenv.config();
+const router = Router();
 
-const router = express.Router();
+// In-memory OTP store (use Redis/Mongo for production)
+const otpStore = new Map();
+const verifiedUsers = new Set();
 
-router.post('/send-contact-email', async (req, res) => {
-  const { name, email, subject, message } = req.body;
+// Send OTP
+router.post(
+  '/send-otp',
+  handler(async (req, res) => {
+    const { email } = req.body;
 
-  if (!email || !name || !subject || !message) {
-    return res.status(400).json({ error: 'All fields are required' });
-  }
+    if (!email) return res.status(400).send({ error: 'Email is required' });
 
-  try {
+    const otp = Math.floor(100000 + Math.random() * 900000).toString();
+
+    otpStore.set(email, {
+      otp,
+      expiresAt: Date.now() + 5 * 60 * 1000, // 5 minutes
+    });
+
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
+        user: 'your_email@gmail.com', // Replace with your Gmail
+        pass: 'your_app_password',     // Replace with Gmail App Password
       },
     });
 
-    const mailOptionsToAdmin = {
-      from: `"Isvaryam Contact Form" <${process.env.EMAIL_USER}>`,
-      to: '71762233016@cit.edu.in',
-      subject: `New Contact Message: ${subject}`,
-      html: `
-        <h3>Contact Form Submission</h3>
-        <p><strong>Name:</strong> ${name}</p>
-        <p><strong>Email:</strong> ${email}</p>
-        <p><strong>Subject:</strong> ${subject}</p>
-        <p><strong>Message:</strong> ${message}</p>
-      `,
-    };
-
-    const mailOptionsToUser = {
-      from: `"Isvaryam Support" <${process.env.EMAIL_USER}>`,
+    await transporter.sendMail({
+      from: '"Isvaryam" <your_email@gmail.com>',
       to: email,
-      subject: 'Thanks for contacting Isvaryam!',
-      html: `
-        <p>Hi ${name},</p>
-        <p>Thanks for getting in touch with Isvaryam. We have received your message:</p>
-        <blockquote>${message}</blockquote>
-        <p>We will get back to you as soon as possible.</p>
-        <p>Regards,<br/>Team Isvaryam</p>
-      `,
-    };
+      subject: 'Your OTP Code',
+      text: `Your OTP is: ${otp}. It will expire in 5 minutes.`,
+    });
 
-    // Send to admin and user
-    await transporter.sendMail(mailOptionsToAdmin);
-    await transporter.sendMail(mailOptionsToUser);
+    res.send({ message: 'OTP sent successfully' });
+  })
+);
 
-    res.status(200).json({ message: 'Emails sent successfully' });
-  } catch (error) {
-    console.error('Email send error:', error);
-    res.status(500).json({ error: 'Failed to send email' });
-  }
-});
+// Verify OTP
+router.post(
+  '/verify-otp',
+  handler(async (req, res) => {
+    const { email, otp } = req.body;
 
-export default router;
+    const record = otpStore.get(email);
+
+    if (!record) {
+      return res.status(400).send({ error: 'OTP not found for this email' });
+    }
+
+    const { otp: storedOtp, expiresAt } = record;
+
+    if (Date.now() > expiresAt) {
+      otpStore.delete(email);
+      return res.status(400).send({ error: 'OTP has expired' });
+    }
+
+    if (storedOtp !== otp) {
+      return res.status(400).send({ error: 'Invalid OTP' });
+    }
+
+    verifiedUsers.add(email);        // Mark user as verified
+    otpStore.delete(email);          // Clean up used OTP
+
+    res.send({ message: 'OTP verified successfully', verified: true });
+  })
+);
+
+// You can access `verifiedUsers.has(email)` during registration
+export { router as otpRouter, verifiedUsers };
