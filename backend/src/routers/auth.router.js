@@ -2,15 +2,14 @@ import nodemailer from 'nodemailer';
 import { Router } from 'express';
 import handler from 'express-async-handler';
 import dotenv from 'dotenv';
-import { UserModel } from '../models/user.model.js'; // ✅ Add this to create user if not exists
 
 dotenv.config(); // Load env vars from .env
 
 const router = Router();
 
 // Temporary in-memory stores
-const otpStore = new Map();
-const verifiedUsers = new Set();
+const otpStore = new Map();       // For OTP + expiry
+const verifiedUsers = new Set();  // For tracking verified emails
 
 // ===== Send OTP Endpoint =====
 router.post(
@@ -30,7 +29,6 @@ router.post(
       expiresAt: Date.now() + 5 * 60 * 1000,
     });
 
-    // Configure transporter
     const transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
@@ -84,21 +82,8 @@ router.post(
       return res.status(400).json({ error: 'Invalid OTP' });
     }
 
-    // ✅ Clear OTP after success
-    otpStore.delete(email);
-    verifiedUsers.add(email);
-
-    // ✅ Ensure user exists — create if not found
-    let user = await UserModel.findOne({ email });
-    if (!user) {
-      user = await UserModel.create({
-        name: email.split('@')[0], // derive a name from email
-        email,
-        password: '', // no password for OTP login
-        googleSignup: false,
-      });
-      console.log(`New OTP user created: ${email}`);
-    }
+    otpStore.delete(email);           // ✅ Remove OTP
+    verifiedUsers.add(email);         // ✅ Temporarily mark email as verified
 
     console.log(`OTP verified for ${email}`);
     res.json({ message: 'OTP verified successfully', verified: true });
