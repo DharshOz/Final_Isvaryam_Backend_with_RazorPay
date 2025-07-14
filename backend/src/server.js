@@ -18,6 +18,8 @@ import { dbconnect } from './config/database.config.js';
 import couponRouter from './routers/coupon.router.js';
 import recipeRouter from './routers/recipe.router.js';
 
+import recipeRouter from './routers/auth.router.js';
+
 import mailRoute from './routers/mail.route.js';
 import './models/user.model.js'; // Make sure this path is correct
 // ✅ Register models explicitly before routes
@@ -69,6 +71,7 @@ app.use(express.urlencoded({ limit: '20mb', extended: true }));
 app.use('/api/reviews', reviewRouter);
 app.use('/api/foods', foodRouter);
 
+app.use('/api/otp', mailRoute);
 app.use('/api/contact', mailRoute);
 
 app.use('/api/users', userRouter);
