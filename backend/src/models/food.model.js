@@ -27,4 +27,4 @@ const productSchema = new mongoose.Schema({
   discount: { type: Number, default: 0 } // Discount percentage (0-100)
 });
 
-export const FoodModel = mongoose.model('Product', productSchema);bb
+export const FoodModel = mongoose.model('Product', productSchema);
