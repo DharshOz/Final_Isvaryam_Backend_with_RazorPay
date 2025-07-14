@@ -19,7 +19,7 @@ router.post(
   '/',
   admin,
   handler(async (req, res) => {
-    const { productId, name, description, images, category, specifications, quantities, discount } = req.body;
+    const { productId, name, description, images, category, ingredients, specifications, quantities, discount } = req.body;
 
     const product = new FoodModel({
       productId,
@@ -27,6 +27,7 @@ router.post(
       description,
       images,
       category,
+      ingredients,
       specifications,
       quantities,
       discount: discount ?? 0
@@ -43,23 +44,49 @@ router.put(
   '/',
   admin,
   handler(async (req, res) => {
-    const { id, productId, name, description, images, category, specifications, quantities, discount } = req.body;
+    const {
+      id,
+      productId,
+      name,
+      description,
+      images,
+      category,
+      ingredients,
+      specifications,
+      quantities,
+      discount
+    } = req.body;
 
-    await FoodModel.updateOne(
-      { _id: id },
+    // Log for debugging
+    console.log('Update payload:', req.body);
+
+    // Validate required fields
+    if (!id) {
+      return res.status(400).json({ error: 'Product id is required' });
+    }
+
+    // Update and return the updated document
+    const updated = await FoodModel.findByIdAndUpdate(
+      id,
       {
         productId,
         name,
         description,
         images,
         category,
+        ingredients,
         specifications,
         quantities,
         discount: discount ?? 0
-      }
+      },
+      { new: true }
     );
 
-    res.send();
+    if (!updated) {
+      return res.status(404).json({ error: 'Product not found' });
+    }
+
+    res.send(updated);
   })
 );
 
@@ -73,6 +100,7 @@ router.delete(
     res.send();
   })
 );
+
 // Get products by category
 router.get(
   '/category/:category',
