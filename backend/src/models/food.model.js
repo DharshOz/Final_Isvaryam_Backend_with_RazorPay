@@ -6,6 +6,12 @@ const productSchema = new mongoose.Schema({
   description: { type: String },
   images: [{ type: String }],
   category: { type: String },
+  ingredients: [
+    {
+      name: { type: String, required: true },
+      quantity: { type: String, required: true }
+    }
+  ],
   specifications: [
     {
       name: { type: String, required: true },
@@ -21,4 +27,4 @@ const productSchema = new mongoose.Schema({
   discount: { type: Number, default: 0 } // Discount percentage (0-100)
 });
 
-export const FoodModel = mongoose.model('Product', productSchema);
+export const FoodModel = mongoose.model('Product', productSchema);bb
