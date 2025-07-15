@@ -38,7 +38,7 @@ const __dirname = dirname(__filename);
 const app = express();
 const allowedOrigins = [
   'https://isvaryam-01.onrender.com',
-  'https://isvaryam2-o.onrender.com',
+  //'https://isvaryam2-o.onrender.com',
   'http://localhost:3000'
 ];
 app.use((req, res, next) => {
