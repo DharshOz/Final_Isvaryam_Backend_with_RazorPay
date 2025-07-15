@@ -93,7 +93,21 @@ app.use('/api/recipes', recipeRouter);
 app.use('/api/coupons', couponRouter);
 // Debug Mongo URI in console
 console.log('Mongo URI:', process.env.MONGO_URI);
+app.use(express.static(path.join(__dirname, 'client/build')));
 
+// Handle React routing - return all requests to React app
+app.get('*', (req, res) => {
+  res.sendFile(path.join(__dirname, 'client/build', 'index.html'));
+});
+
+// Debug Mongo URI in console
+console.log('Mongo URI:', process.env.MONGO_URI);
+
+// Start server
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => {
+  console.log(`Server listening on port ${PORT}`);
+});
 // Start server
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
