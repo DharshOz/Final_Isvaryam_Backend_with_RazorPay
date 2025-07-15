@@ -95,20 +95,35 @@ router.post(
 );
 
 // Profile update
+// Updated Profile Update with Optional Password
 router.put(
   '/updateProfile',
   auth,
   handler(async (req, res) => {
-    const { name, address, phone } = req.body;
-    const user = await UserModel.findByIdAndUpdate(
-      req.user.id,
-      { name, address, phone },
-      { new: true }
-    );
+    const { name, address, phone, password } = req.body;
+
+    const user = await UserModel.findById(req.user.id);
+
+    if (!user) {
+      res.status(BAD_REQUEST).send('User not found');
+      return;
+    }
+
+    user.name = name || user.name;
+    user.address = address || user.address;
+    user.phone = phone || user.phone;
+
+    // ✅ Update password if provided and non-empty
+    if (password && typeof password === 'string' && password.trim() !== '') {
+      user.password = await bcrypt.hash(password, PASSWORD_HASH_SALT_ROUNDS);
+    }
+
+    await user.save();
 
     res.send(generateTokenResponse(user));
   })
 );
+
 
 // Change password
 router.put(
