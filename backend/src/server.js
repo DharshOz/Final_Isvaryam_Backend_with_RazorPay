@@ -18,6 +18,7 @@ import { dbconnect } from './config/database.config.js';
 import couponRouter from './routers/coupon.router.js';
 import recipeRouter from './routers/recipe.router.js';
 
+import forgetRouter from './routers/forget.router.js';
 import otpRoute from './routers/auth.router.js';
 
 import mailRoute from './routers/mail.route.js';
@@ -74,6 +75,7 @@ app.use('/api/foods', foodRouter);
 app.use('/api/otp', otpRoute);
 app.use('/api/contact', mailRoute);
 
+app.use('/api/forget', forgetRouter);
 app.use('/api/users', userRouter);
 app.use('/api/orders', orderRouter);
 app.use('/api/upload', uploadRouter);
