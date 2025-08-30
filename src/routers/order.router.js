@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import handler from 'express-async-handler';
 import auth from '../middleware/auth.mid.js';
-import admin from '../middleware/admin.mid.js';
 import { BAD_REQUEST, UNAUTHORIZED } from '../constants/httpStatus.js';
 import { OrderModel } from '../models/order.model.js';
 import { PaymentModel } from '../models/payment.model.js';
@@ -9,6 +8,7 @@ import { OrderStatus } from '../constants/orderStatus.js';
 import { UserModel } from '../models/user.model.js';
 import { sendEmailReceipt } from '../helpers/mail.helper.js';
 import { FoodModel } from '../models/food.model.js';
+import admin from '../middleware/admin.mid.js';
 import Razorpay from 'razorpay';
 import crypto from 'crypto';
 
@@ -21,7 +21,7 @@ const razorpay = new Razorpay({
 const router = Router();
 router.use(auth);
 
-/* ---------------- CREATE ORDER ---------------- */
+// ✅ Create Order in DB
 router.post(
   '/create',
   handler(async (req, res) => {
@@ -33,12 +33,12 @@ router.post(
     for (const item of order.items) {
       const product = await FoodModel.findById(item.product);
       if (!product) return res.status(BAD_REQUEST).send('Invalid product in cart!');
-      const quantityObj = product.quantities.find((q) => q.size === item.size);
+      const quantityObj = product.quantities.find(q => q.size === item.size);
       if (!quantityObj) return res.status(BAD_REQUEST).send('Invalid size for product!');
       if (quantityObj.price !== item.price) return res.status(BAD_REQUEST).send('Price mismatch!');
     }
 
-    order.items = order.items.filter((item) => item.product);
+    order.items = order.items.filter(item => item.product);
     if (order.items.length === 0) {
       return res.status(BAD_REQUEST).send('No valid products in cart!');
     }
@@ -50,30 +50,91 @@ router.post(
   })
 );
 
-/* ---------------- PAYPAL PAYMENT ---------------- */
+// ✅ Create Razorpay Payment Order
 router.post(
-  '/paypal/pay',
+  '/razorpay/create-order',
   handler(async (req, res) => {
     try {
-      const { paymentId } = req.body;
-      if (!paymentId) return res.status(BAD_REQUEST).json({ error: 'Missing PayPal paymentId' });
+      const order = await getNewOrderForCurrentUser(req);
+      if (!order) {
+        return res.status(BAD_REQUEST).json({ error: 'Order Not Found!' });
+      }
+
+      // Ensure amount is in paise
+      const amountInPaise = Math.round(order.totalPrice * 100);
+
+      const options = {
+        amount: amountInPaise,
+        currency: 'INR',
+        receipt: `order_rcptid_${order._id}`,
+        payment_capture: 1 // Auto capture payment
+      };
+
+      const razorpayOrder = await razorpay.orders.create(options);
+
+      res.json({
+        success: true,
+        orderId: razorpayOrder.id,
+        amount: razorpayOrder.amount,
+        currency: razorpayOrder.currency,
+        receipt: razorpayOrder.receipt
+      });
+
+    } catch (err) {
+      console.error('❌ Razorpay Create Order Error:', err);
+      res.status(500).json({
+        error: 'Failed to create Razorpay order',
+        message: err.message
+      });
+    }
+  })
+);
+
+// ✅ Verify Razorpay Payment
+router.post(
+  '/razorpay/verify-payment',
+  handler(async (req, res) => {
+    try {
+      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
+
+      if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+        return res.status(BAD_REQUEST).json({ error: 'Missing required payment verification fields' });
+      }
+
+      // Generate expected signature
+      const body = razorpay_order_id + '|' + razorpay_payment_id;
+      const expectedSignature = crypto
+        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
+        .update(body.toString())
+        .digest('hex');
+
+      console.log('🔍 Signature Check:', {
+        expected: expectedSignature,
+        received: razorpay_signature
+      });
+
+      if (expectedSignature !== razorpay_signature) {
+        return res.status(BAD_REQUEST).json({ error: 'Invalid Signature!' });
+      }
 
       const order = await getNewOrderForCurrentUser(req);
-      if (!order) return res.status(BAD_REQUEST).json({ error: 'Order Not Found!' });
+      if (!order) {
+        return res.status(BAD_REQUEST).json({ error: 'Order Not Found!' });
+      }
 
       // Save payment details
       const payment = new PaymentModel({
         order: order._id,
         user: req.user.id,
-        paymentId,
-        method: 'PayPal',
+        paymentId: razorpay_payment_id,
+        method: 'Razorpay',
         amount: order.totalPrice,
-        status: 'COMPLETED',
+        status: 'COMPLETED'
       });
       await payment.save();
 
-      // Update order
-      order.paymentId = paymentId;
+      // Update order status
+      order.paymentId = razorpay_payment_id;
       order.status = OrderStatus.PAYED;
       await order.save();
 
@@ -84,105 +145,20 @@ router.post(
         success: true,
         orderId: order._id,
         paymentId: payment._id,
-        paymentStatus: 'COMPLETED',
+        paymentStatus: 'COMPLETED'
       });
-    } catch (err) {
-      console.error('❌ PayPal Payment Error:', err);
-      res.status(500).json({ error: 'Failed to record PayPal payment', message: err.message });
-    }
-  })
-);
 
-/* ---------------- RAZORPAY CREATE ORDER ---------------- */
-router.post(
-  '/razorpay/create-order',
-  handler(async (req, res) => {
-    try {
-      const order = await getNewOrderForCurrentUser(req);
-      if (!order) return res.status(BAD_REQUEST).json({ error: 'Order Not Found!' });
-
-      const amountInPaise = Math.round(order.totalPrice * 100);
-
-      const options = {
-        amount: amountInPaise,
-        currency: 'INR',
-        receipt: `order_rcptid_${order._id}`,
-        payment_capture: 1,
-      };
-
-      const razorpayOrder = await razorpay.orders.create(options);
-
-      res.json({
-        success: true,
-        orderId: razorpayOrder.id,
-        amount: razorpayOrder.amount,
-        currency: razorpayOrder.currency,
-        receipt: razorpayOrder.receipt,
-      });
-    } catch (err) {
-      console.error('❌ Razorpay Create Order Error:', err);
-      res.status(500).json({ error: 'Failed to create Razorpay order', message: err.message });
-    }
-  })
-);
-
-/* ---------------- RAZORPAY VERIFY PAYMENT ---------------- */
-router.post(
-  '/razorpay/verify-payment',
-  handler(async (req, res) => {
-    try {
-      const { razorpay_order_id, razorpay_payment_id, razorpay_signature } = req.body;
-
-      if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
-        return res
-          .status(BAD_REQUEST)
-          .json({ error: 'Missing required payment verification fields' });
-      }
-
-      // Validate signature
-      const body = razorpay_order_id + '|' + razorpay_payment_id;
-      const expectedSignature = crypto
-        .createHmac('sha256', process.env.RAZORPAY_KEY_SECRET)
-        .update(body.toString())
-        .digest('hex');
-
-      if (expectedSignature !== razorpay_signature) {
-        return res.status(BAD_REQUEST).json({ error: 'Invalid Signature!' });
-      }
-
-      const order = await getNewOrderForCurrentUser(req);
-      if (!order) return res.status(BAD_REQUEST).json({ error: 'Order Not Found!' });
-
-      const payment = new PaymentModel({
-        order: order._id,
-        user: req.user.id,
-        paymentId: razorpay_payment_id,
-        method: 'Razorpay',
-        amount: order.totalPrice,
-        status: 'COMPLETED',
-      });
-      await payment.save();
-
-      order.paymentId = razorpay_payment_id;
-      order.status = OrderStatus.PAYED;
-      await order.save();
-
-      sendEmailReceipt(order);
-
-      res.json({
-        success: true,
-        orderId: order._id,
-        paymentId: payment._id,
-        paymentStatus: 'COMPLETED',
-      });
     } catch (err) {
       console.error('❌ Razorpay Verify Payment Error:', err);
-      res.status(500).json({ error: 'Failed to verify Razorpay payment', message: err.message });
+      res.status(500).json({
+        error: 'Failed to verify Razorpay payment',
+        message: err.message
+      });
     }
   })
 );
 
-/* ---------------- TRACK ORDER ---------------- */
+// ✅ Track Order
 router.get(
   '/track/:orderId',
   handler(async (req, res) => {
@@ -199,18 +175,20 @@ router.get(
   })
 );
 
-/* ---------------- DELETE ORDER ---------------- */
+// ✅ Delete Order
 router.delete('/:id', async (req, res) => {
   try {
     const deletedOrder = await OrderModel.findByIdAndDelete(req.params.id);
-    if (!deletedOrder) return res.status(404).json({ message: 'Order not found' });
+    if (!deletedOrder) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
     res.json({ message: 'Order deleted successfully' });
   } catch (err) {
     res.status(500).json({ message: 'Server error' });
   }
 });
 
-/* ---------------- GET NEW ORDER ---------------- */
+// ✅ Get New Order for Current User
 router.get('/newOrderForCurrentUser', auth, async (req, res) => {
   try {
     const order = await OrderModel.findOne({
@@ -218,9 +196,13 @@ router.get('/newOrderForCurrentUser', auth, async (req, res) => {
       status: OrderStatus.NEW,
     })
       .populate('user')
-      .populate({ path: 'items.product', select: 'name images quantities' });
+      .populate({
+        path: 'items.product',
+        select: 'name images quantities',
+      });
 
     if (!order) return res.status(404).send({ message: 'No active order found' });
+
     res.send(order);
   } catch (err) {
     console.error('Error in newOrderForCurrentUser:', err);
@@ -228,12 +210,13 @@ router.get('/newOrderForCurrentUser', auth, async (req, res) => {
   }
 });
 
-/* ---------------- GET ALL STATUS ---------------- */
+// ✅ Get All Status
 router.get('/allstatus', (req, res) => {
-  res.send(Object.values(OrderStatus));
+  const allStatus = Object.values(OrderStatus);
+  res.send(allStatus);
 });
 
-/* ---------------- GET ORDERS BY STATUS ---------------- */
+// ✅ Get Orders by Status
 router.get(
   '/:status?',
   handler(async (req, res) => {
@@ -244,12 +227,15 @@ router.get(
     if (!user.isAdmin) filter.user = user._id;
     if (status) filter.status = status;
 
-    const orders = await OrderModel.find(filter).populate('items.product').sort('-createdAt');
+    const orders = await OrderModel.find(filter)
+      .populate('items.product')
+      .sort('-createdAt');
+
     res.send(orders);
   })
 );
 
-/* ---------------- ADMIN: GET ALL ORDERS ---------------- */
+// ✅ Get All Orders (Admin)
 router.get(
   '/orders',
   admin,
@@ -273,7 +259,7 @@ router.get(
   })
 );
 
-/* ---------------- ADMIN: UPDATE ORDER STATUS ---------------- */
+// ✅ Update Order Status (Admin)
 router.patch(
   '/order/:id/status',
   admin,
@@ -286,7 +272,7 @@ router.patch(
   })
 );
 
-/* ---------------- ADMIN: UPDATE PAYMENT STATUS ---------------- */
+// ✅ Update Payment Status (Admin)
 router.patch(
   '/payment/:id/status',
   admin,
@@ -310,7 +296,7 @@ router.patch(
   })
 );
 
-/* ---------------- USER PURCHASE COUNT ---------------- */
+// ✅ User Purchase Count
 router.get('/user-purchase-count', auth, async (req, res) => {
   try {
     const count = await OrderModel.countDocuments({ user: req.user.id, status: 'PAYED' });
@@ -321,7 +307,7 @@ router.get('/user-purchase-count', auth, async (req, res) => {
   }
 });
 
-/* ---------------- GET ORDER BY ID ---------------- */
+// ✅ Get Order by ID
 router.get(
   '/order/:id',
   handler(async (req, res) => {
@@ -331,8 +317,11 @@ router.get(
   })
 );
 
-const getNewOrderForCurrentUser = async (req) =>
-  await OrderModel.findOne({ user: req.user.id, status: OrderStatus.NEW })
+const getNewOrderForCurrentUser = async req =>
+  await OrderModel.findOne({
+    user: req.user.id,
+    status: OrderStatus.NEW,
+  })
     .sort({ createdAt: -1 })
     .populate('user');
 
